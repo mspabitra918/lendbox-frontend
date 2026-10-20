@@ -115,8 +115,12 @@ export default function RegisterForm() {
     setSubmitting(true);
     setSubmitError("");
     try {
-      await submitApplication(data);
-      router.push("/borrower/register/thank-you");
+      const res = await submitApplication(data);
+      router.push(
+        `/borrower/register/thank-you?email=${encodeURIComponent(
+          data.personal.email,
+        )}&id=${encodeURIComponent(res.data.applicationId)}&reference=${encodeURIComponent(res.data.reference)}`,
+      );
     } catch {
       setSubmitError(
         "Something went wrong submitting your application. Please try again.",
@@ -312,7 +316,7 @@ type StepProps = {
   ) => void;
 };
 
-function StepPersonal({ data, errors, set }: StepProps) {
+export function StepPersonal({ data, errors, set }: StepProps) {
   const { loan, personal: p } = data;
   return (
     <div className="grid gap-5 sm:grid-cols-2">
@@ -594,7 +598,7 @@ function StepPersonal({ data, errors, set }: StepProps) {
   );
 }
 
-function StepEmployment({ data, errors, set }: StepProps) {
+export function StepEmployment({ data, errors, set }: StepProps) {
   const em = data.employment;
   const employed = ["full_time", "part_time", "self_employed"].includes(
     em.employmentStatus,
@@ -701,7 +705,7 @@ function StepEmployment({ data, errors, set }: StepProps) {
   );
 }
 
-function StepBanking({ data, errors, set }: StepProps) {
+export function StepBanking({ data, errors, set }: StepProps) {
   const b = data.banking;
   return (
     <div className="grid gap-5 sm:grid-cols-2">
@@ -812,7 +816,7 @@ function StepBanking({ data, errors, set }: StepProps) {
   );
 }
 
-function StepReview({
+export function StepReview({
   data,
   errors,
   set,
@@ -981,7 +985,7 @@ function StepReview({
   );
 }
 
-function ReviewCard({
+export function ReviewCard({
   title,
   onEdit,
   children,
@@ -1007,7 +1011,7 @@ function ReviewCard({
   );
 }
 
-function Row({
+export function Row({
   label,
   value,
   wide,
@@ -1026,7 +1030,7 @@ function Row({
   );
 }
 
-function CheckIcon() {
+export function CheckIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
       <path
@@ -1038,7 +1042,7 @@ function CheckIcon() {
   );
 }
 
-function LockIcon() {
+export function LockIcon() {
   return (
     <svg
       viewBox="0 0 24 24"

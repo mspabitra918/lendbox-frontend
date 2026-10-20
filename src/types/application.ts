@@ -69,9 +69,11 @@ export type ApplicationFormData = {
 
 export type ApplicationStatus =
   | "submitted"
+  | "pending_loan_agreement"
+  | "loan_agreement_signed"
   | "approved"
-  | "declined"
   | "funded"
+  | "declined"
   | "withdrawn";
 
 // What we keep after submit — sensitive fields are masked or dropped.
@@ -89,4 +91,11 @@ export type StoredApplication = {
   loan: ApplicationFormData["loan"];
   bankName: string;
   accountLast4: string;
+};
+
+export type StoredApplicationId = {
+  data: {
+    applicationId: string;
+    reference: string;
+  };
 };

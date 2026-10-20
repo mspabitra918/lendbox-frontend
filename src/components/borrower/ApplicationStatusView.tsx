@@ -1,15 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import type { ApplicationStatus, StoredApplication } from "@/types/application";
-import {
-  PURPOSES,
-  formatCurrency,
-  labelOf,
-  updateApplicationStatus,
-} from "@/lib/application";
+import { PURPOSES, formatCurrency, labelOf } from "@/lib/application";
 
 type StatusMeta = {
   label: string;
@@ -60,39 +55,63 @@ const STATUS: Record<ApplicationStatus, StatusMeta> = {
     badge: "bg-slate-100 text-slate-700 ring-slate-500/20",
     dot: "bg-slate-400",
   },
+  pending_loan_agreement: {
+    label: "Agreement Pending",
+    title: "Loan agreement pending",
+    message: "Please review and complete your loan agreement.",
+    badge: "bg-amber-50 text-amber-700 ring-amber-600/20",
+    dot: "bg-amber-500",
+  },
+  loan_agreement_signed: {
+    label: "Agreement Signed",
+    title: "Loan agreement signed",
+    message: "Your signed loan agreement has been received.",
+    badge: "bg-indigo-50 text-indigo-700 ring-indigo-600/20",
+    dot: "bg-indigo-500",
+  },
 };
 
 const HAPPY_PATH: ApplicationStatus[] = ["submitted", "approved", "funded"];
-const ALL_STATUSES = Object.keys(STATUS) as ApplicationStatus[];
-
 type TimelineNode = {
   status: ApplicationStatus;
   state: "done" | "current" | "upcoming" | "terminal";
 };
 
-// Mock dummy data
-const DUMMY_APPLICATION: StoredApplication = {
-  id: "1234567890",
-  history: [
-    { status: "submitted" as ApplicationStatus, at: "2024-06-01T10:00:00Z" },
-    { status: "approved" as ApplicationStatus, at: "2024-06-02T14:30:00Z" },
-  ],
-  bankName: "Bank of America",
-  accountLast4: "1234",
-  submittedAt: "2024-06-01T10:00:00Z",
-  status: "declined" as ApplicationStatus,
-  applicant: {
-    firstName: "John",
-    lastName: "Doe",
-    email: "pabitra@gmail.com",
-    phone: "123-456-7890",
-  },
-  loan: {
-    amount: 50000,
-    purpose: "personal",
-    otherPurpose: "",
-  },
-};
+function normalizeStatus(status: string): ApplicationStatus {
+  // The backend uses "received"; the current UI calls this "submitted".
+  const normalized = status === "received" ? "submitted" : status;
+
+  if (normalized in STATUS) {
+    return normalized as ApplicationStatus;
+  }
+
+  throw new Error(`Unsupported application status: ${status}`);
+}
+
+function mapApplication(data: StoredApplication): StoredApplication {
+  return {
+    id: data.id ?? data.id ?? "",
+    status: normalizeStatus(data.status),
+    submittedAt: data.submittedAt,
+    bankName: data.bankName ?? "",
+    accountLast4: data.accountLast4 ?? "",
+    history: data.history.map((item) => ({
+      status: normalizeStatus(item.status),
+      at: item.at,
+    })),
+    applicant: {
+      firstName: data.applicant.firstName,
+      lastName: data.applicant.lastName ?? "",
+      email: data.applicant.email ?? "",
+      phone: data.applicant.phone ?? "",
+    },
+    loan: {
+      amount: Number(data.loan.amount),
+      purpose: data.loan.purpose,
+      otherPurpose: data.loan.otherPurpose ?? "",
+    },
+  };
+}
 
 function buildTimeline(app: StoredApplication): TimelineNode[] {
   const idx = HAPPY_PATH.indexOf(app.status);
@@ -134,34 +153,73 @@ function ApplicationStatusContent() {
   const [hasSearched, setHasSearched] = useState(false);
   const [app, setApp] = useState<StoredApplication | null>(null);
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Core lookup logic
-  const performLookup = (id: string, email: string) => {
-    const cleanId = id.trim().toLowerCase();
-    const cleanEmail = email.trim().toLowerCase();
+  const performLookup = useCallback(async (id: string, email: string) => {
+    const cleanId = id.trim();
+    const cleanEmail = email.trim();
 
     setHasSearched(true);
+    setApp(null);
+    setError("");
 
-    if (!cleanId && !cleanEmail) {
-      setApp(null);
+    if (!cleanId || !cleanEmail) {
+      setError("Enter both your Application ID and registered email.");
       return;
     }
 
-    const dummyId = DUMMY_APPLICATION.id.toLowerCase();
-    const dummyEmail = DUMMY_APPLICATION.applicant.email.toLowerCase();
+    setLoading(true);
 
-    let isMatch = false;
+    try {
+      const baseUrl = (
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:4100"
+      ).replace(/\/+$/, "");
 
-    if (cleanId && cleanEmail) {
-      isMatch = cleanId === dummyId && cleanEmail === dummyEmail;
-    } else if (cleanId) {
-      isMatch = cleanId === dummyId;
-    } else if (cleanEmail) {
-      isMatch = cleanEmail === dummyEmail;
+      const params = new URLSearchParams({
+        applicationId: String(cleanId),
+        email: cleanEmail,
+      });
+
+      const response = await fetch(
+        `${baseUrl}/api/v1/applications/status-lookup`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: params.toString(),
+          cache: "no-store",
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error?.message ||
+            result?.message ||
+            "Unable to find your application.",
+        );
+      }
+
+      // Supports APIs returning either the object directly or { data: object }.
+      const data = result?.data ?? result;
+
+      setApp(mapApplication(data));
+    } catch (err) {
+      setApp(null);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setApp(isMatch ? DUMMY_APPLICATION : null);
-  };
+  }, []);
 
   // Pre-fill inputs and auto-search if query params exist in URL
   useEffect(() => {
@@ -171,13 +229,13 @@ function ApplicationStatusContent() {
     if (queryId || queryEmail) {
       setSearchId(queryId);
       setSearchEmail(queryEmail);
-      performLookup(queryId, queryEmail);
+      void performLookup(queryId, queryEmail);
     }
-  }, [searchParams]);
+  }, [searchParams, performLookup]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    performLookup(searchId, searchEmail);
+    void performLookup(searchId, searchEmail);
   };
 
   const handleClear = () => {
@@ -185,6 +243,57 @@ function ApplicationStatusContent() {
     setSearchEmail("");
     setHasSearched(false);
     setApp(null);
+    setError("");
+    setConfirmWithdraw(false);
+  };
+
+  const updateApplicationStatus = async (applicationId: string) => {
+    setError("");
+    setLoading(true);
+
+    try {
+      const baseUrl = "http://localhost:4100";
+
+      const response = await fetch(
+        `${baseUrl}/api/v1/withdraw/withdraw-application`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            applicationId: String(applicationId),
+          }),
+          cache: "no-store",
+        },
+      );
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          result?.message ||
+            result?.error?.message ||
+            "Unable to withdraw your application.",
+        );
+      }
+
+      // Refresh the application status from the backend.
+      await performLookup(applicationId, searchEmail);
+      setConfirmWithdraw(false);
+      setError("");
+    } catch (error) {
+      console.error("Error withdrawing application:", error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to withdraw your application. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const meta = app ? STATUS[app.status] : null;
@@ -210,7 +319,7 @@ function ApplicationStatusContent() {
               Track Application Status
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Enter your Application ID or registered Email address to search.
+              Enter your Application ID and registered email address to search.
             </p>
 
             <form
@@ -229,7 +338,7 @@ function ApplicationStatusContent() {
                   type="text"
                   value={searchId}
                   onChange={(e) => setSearchId(e.target.value)}
-                  placeholder="e.g. 1234567890"
+                  placeholder="e.g. 7NY1FD"
                   className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                 />
               </div>
@@ -263,9 +372,10 @@ function ApplicationStatusContent() {
                 )}
                 <button
                   type="submit"
-                  className="rounded-full bg-brand px-8 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-brand-600 transition"
+                  disabled={loading}
+                  className="rounded-full bg-brand px-8 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-brand-600 transition disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Search Application
+                  {loading ? "Searching..." : "Search Application"}
                 </button>
               </div>
             </form>
@@ -295,6 +405,21 @@ function ApplicationStatusContent() {
               >
                 Apply now
               </Link>
+            </div>
+          )}
+
+          {loading && (
+            <div className="py-12 text-center text-slate-500">
+              Loading application details...
+            </div>
+          )}
+
+          {error && !loading && (
+            <div
+              role="alert"
+              className="my-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+            >
+              {error}
             </div>
           )}
 
@@ -396,9 +521,9 @@ function ApplicationStatusContent() {
                             <button
                               type="button"
                               onClick={() => {
-                                updateApplicationStatus("withdrawn");
-                                setConfirmWithdraw(false);
+                                updateApplicationStatus(app.id);
                               }}
+                              disabled={loading}
                               className="flex-1 rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
                             >
                               Withdraw

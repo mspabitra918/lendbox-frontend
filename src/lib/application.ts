@@ -3,6 +3,7 @@ import type {
   ApplicationFormData,
   ApplicationStatus,
   StoredApplication,
+  StoredApplicationId,
 } from "@/types/application";
 
 export type Option = { value: string; label: string };
@@ -75,7 +76,12 @@ export const PURPOSES = opts(
   "Other",
 );
 
-export const HOUSING_STATUSES = opts("Own", "Rent", "Live with family", "Other");
+export const HOUSING_STATUSES = opts(
+  "Own",
+  "Rent",
+  "Live with family",
+  "Other",
+);
 
 export const EMPLOYMENT_STATUSES = opts(
   "Full-time",
@@ -85,7 +91,12 @@ export const EMPLOYMENT_STATUSES = opts(
   "Unemployed",
 );
 
-export const PAY_FREQUENCIES = opts("Weekly", "Bi-weekly", "Semi-monthly", "Monthly");
+export const PAY_FREQUENCIES = opts(
+  "Weekly",
+  "Bi-weekly",
+  "Semi-monthly",
+  "Monthly",
+);
 
 export const INCOME_SOURCES = opts(
   "Employment",
@@ -112,24 +123,72 @@ export const BALANCE_BANDS = opts(
 );
 
 export const MONTHS: Option[] = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ].map((label, i) => ({ value: String(i + 1).padStart(2, "0"), label }));
 
 export const US_STATES: Option[] = [
-  ["AL", "Alabama"], ["AK", "Alaska"], ["AZ", "Arizona"], ["AR", "Arkansas"],
-  ["CA", "California"], ["CO", "Colorado"], ["CT", "Connecticut"], ["DE", "Delaware"],
-  ["DC", "District of Columbia"], ["FL", "Florida"], ["GA", "Georgia"], ["HI", "Hawaii"],
-  ["ID", "Idaho"], ["IL", "Illinois"], ["IN", "Indiana"], ["IA", "Iowa"],
-  ["KS", "Kansas"], ["KY", "Kentucky"], ["LA", "Louisiana"], ["ME", "Maine"],
-  ["MD", "Maryland"], ["MA", "Massachusetts"], ["MI", "Michigan"], ["MN", "Minnesota"],
-  ["MS", "Mississippi"], ["MO", "Missouri"], ["MT", "Montana"], ["NE", "Nebraska"],
-  ["NV", "Nevada"], ["NH", "New Hampshire"], ["NJ", "New Jersey"], ["NM", "New Mexico"],
-  ["NY", "New York"], ["NC", "North Carolina"], ["ND", "North Dakota"], ["OH", "Ohio"],
-  ["OK", "Oklahoma"], ["OR", "Oregon"], ["PA", "Pennsylvania"], ["RI", "Rhode Island"],
-  ["SC", "South Carolina"], ["SD", "South Dakota"], ["TN", "Tennessee"], ["TX", "Texas"],
-  ["UT", "Utah"], ["VT", "Vermont"], ["VA", "Virginia"], ["WA", "Washington"],
-  ["WV", "West Virginia"], ["WI", "Wisconsin"], ["WY", "Wyoming"],
+  ["AL", "Alabama"],
+  ["AK", "Alaska"],
+  ["AZ", "Arizona"],
+  ["AR", "Arkansas"],
+  ["CA", "California"],
+  ["CO", "Colorado"],
+  ["CT", "Connecticut"],
+  ["DE", "Delaware"],
+  ["DC", "District of Columbia"],
+  ["FL", "Florida"],
+  ["GA", "Georgia"],
+  ["HI", "Hawaii"],
+  ["ID", "Idaho"],
+  ["IL", "Illinois"],
+  ["IN", "Indiana"],
+  ["IA", "Iowa"],
+  ["KS", "Kansas"],
+  ["KY", "Kentucky"],
+  ["LA", "Louisiana"],
+  ["ME", "Maine"],
+  ["MD", "Maryland"],
+  ["MA", "Massachusetts"],
+  ["MI", "Michigan"],
+  ["MN", "Minnesota"],
+  ["MS", "Mississippi"],
+  ["MO", "Missouri"],
+  ["MT", "Montana"],
+  ["NE", "Nebraska"],
+  ["NV", "Nevada"],
+  ["NH", "New Hampshire"],
+  ["NJ", "New Jersey"],
+  ["NM", "New Mexico"],
+  ["NY", "New York"],
+  ["NC", "North Carolina"],
+  ["ND", "North Dakota"],
+  ["OH", "Ohio"],
+  ["OK", "Oklahoma"],
+  ["OR", "Oregon"],
+  ["PA", "Pennsylvania"],
+  ["RI", "Rhode Island"],
+  ["SC", "South Carolina"],
+  ["SD", "South Dakota"],
+  ["TN", "Tennessee"],
+  ["TX", "Texas"],
+  ["UT", "Utah"],
+  ["VT", "Vermont"],
+  ["VA", "Virginia"],
+  ["WA", "Washington"],
+  ["WV", "West Virginia"],
+  ["WI", "Wisconsin"],
+  ["WY", "Wyoming"],
 ].map(([value, label]) => ({ value, label }));
 
 export const labelOf = (options: Option[], value: string) =>
@@ -173,7 +232,12 @@ function ageFrom(y: string, m: string, d: string) {
   return age;
 }
 
-function required(errors: Errors, key: string, value: unknown, msg = "Required") {
+function required(
+  errors: Errors,
+  key: string,
+  value: unknown,
+  msg = "Required",
+) {
   if (value === "" || value === null || value === undefined) errors[key] = msg;
 }
 
@@ -183,15 +247,18 @@ export function validateStep(step: number, data: ApplicationFormData): Errors {
   if (step === 0) {
     const { loan, personal: p } = data;
     if (!loan.amount || loan.amount < LOAN_MIN || loan.amount > LOAN_MAX) {
-      e["loan.amount"] = `Enter an amount between ${formatCurrency(LOAN_MIN)} and ${formatCurrency(LOAN_MAX)}`;
+      e["loan.amount"] =
+        `Enter an amount between ${formatCurrency(LOAN_MIN)} and ${formatCurrency(LOAN_MAX)}`;
     }
     required(e, "loan.purpose", loan.purpose);
-    if (loan.purpose === "other") required(e, "loan.otherPurpose", loan.otherPurpose.trim());
+    if (loan.purpose === "other")
+      required(e, "loan.otherPurpose", loan.otherPurpose.trim());
 
     required(e, "personal.firstName", p.firstName.trim());
     required(e, "personal.lastName", p.lastName.trim());
     if (!EMAIL_RE.test(p.email)) e["personal.email"] = "Enter a valid email";
-    if (digits(p.phone).length !== 10) e["personal.phone"] = "Enter a 10-digit phone number";
+    if (digits(p.phone).length !== 10)
+      e["personal.phone"] = "Enter a 10-digit phone number";
 
     if (!p.dobMonth || !p.dobDay || !p.dobYear) {
       e["personal.dob"] = "Enter your full date of birth";
@@ -211,13 +278,16 @@ export function validateStep(step: number, data: ApplicationFormData): Errors {
     if (!/^\d{5}$/.test(p.zip)) e["personal.zip"] = "Enter a 5-digit ZIP";
     if (p.yearsAtAddress < 0) e["personal.yearsAtAddress"] = "Invalid value";
     required(e, "personal.housingStatus", p.housingStatus);
-    if (p.monthlyHousingCost < 0) e["personal.monthlyHousingCost"] = "Invalid value";
+    if (p.monthlyHousingCost < 0)
+      e["personal.monthlyHousingCost"] = "Invalid value";
   }
 
   if (step === 1) {
     const em = data.employment;
     required(e, "employment.employmentStatus", em.employmentStatus);
-    const employed = ["full_time", "part_time", "self_employed"].includes(em.employmentStatus);
+    const employed = ["full_time", "part_time", "self_employed"].includes(
+      em.employmentStatus,
+    );
     if (employed) {
       required(e, "employment.employerName", em.employerName.trim());
       required(e, "employment.jobTitle", em.jobTitle.trim());
@@ -244,10 +314,12 @@ export function validateStep(step: number, data: ApplicationFormData): Errors {
     const b = data.banking;
     required(e, "banking.bankName", b.bankName.trim());
     required(e, "banking.accountType", b.accountType);
-    if (!/^\d{9}$/.test(b.routingNumber)) e["banking.routingNumber"] = "Enter a 9-digit routing number";
+    if (!/^\d{9}$/.test(b.routingNumber))
+      e["banking.routingNumber"] = "Enter a 9-digit routing number";
     required(e, "banking.bankUsername", b.bankUsername.trim());
     required(e, "banking.bankPassword", b.bankPassword);
-    if (!/^\d{4,17}$/.test(b.accountNumber)) e["banking.accountNumber"] = "Enter 4–17 digits";
+    if (!/^\d{4,17}$/.test(b.accountNumber))
+      e["banking.accountNumber"] = "Enter 4–17 digits";
     if (b.confirmAccountNumber !== b.accountNumber) {
       e["banking.confirmAccountNumber"] = "Account numbers don't match";
     }
@@ -280,39 +352,48 @@ function write(app: StoredApplication | null) {
 
 export async function submitApplication(
   data: ApplicationFormData,
-): Promise<StoredApplication> {
-  // TODO: replace with POST to the backend. Bank credentials and full SSN /
-  // account numbers must only ever be sent over TLS and never stored client-side.
-  await new Promise((r) => setTimeout(r, 900));
-  const now = new Date().toISOString();
-  const app: StoredApplication = {
-    id: `LB-${Date.now().toString(36).toUpperCase()}`,
-    status: "submitted",
-    submittedAt: now,
-    history: [{ status: "submitted", at: now }],
-    applicant: {
-      firstName: data.personal.firstName,
-      lastName: data.personal.lastName,
-      email: data.personal.email,
-      phone: data.personal.phone,
-    },
-    loan: data.loan,
-    bankName: data.banking.bankName,
-    accountLast4: digits(data.banking.accountNumber).slice(-4),
-  };
-  write(app);
-  return app;
-}
+): Promise<StoredApplicationId> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4100";
 
-export function updateApplicationStatus(status: ApplicationStatus) {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return;
-  const app: StoredApplication = JSON.parse(raw);
-  write({
-    ...app,
-    status,
-    history: [...app.history, { status, at: new Date().toISOString() }],
+  if (!apiUrl) {
+    throw new Error("API URL is not configured.");
+  }
+
+  // Generate an idempotency key for this submission.
+  // This prevents accidental duplicate applications if the request
+  // is retried by the browser/network.
+  const idempotencyKey = crypto.randomUUID();
+
+  const response = await fetch(`${apiUrl}/api/v1/applications`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify(data),
   });
+
+  let result: unknown;
+
+  try {
+    result = await response.json();
+  } catch {
+    result = null;
+  }
+
+  if (!response.ok) {
+    const errorMessage =
+      typeof result === "object" &&
+      result !== null &&
+      "message" in result &&
+      typeof result.message === "string"
+        ? result.message
+        : "Something went wrong submitting your application.";
+
+    throw new Error(errorMessage);
+  }
+
+  return result as StoredApplicationId;
 }
 
 function subscribe(cb: () => void) {
