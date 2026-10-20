@@ -8,6 +8,13 @@ import type {
 
 export type Option = { value: string; label: string };
 
+export function getApiBaseUrl(): string {
+  return (
+    (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4100").trim() ||
+    "http://localhost:4100"
+  ).replace(/\/+$/, "");
+}
+
 export const LOAN_MIN = 500;
 export const LOAN_MAX = 50000;
 
@@ -353,11 +360,7 @@ function write(app: StoredApplication | null) {
 export async function submitApplication(
   data: ApplicationFormData,
 ): Promise<StoredApplicationId> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4100";
-
-  if (!apiUrl) {
-    throw new Error("API URL is not configured.");
-  }
+  const apiUrl = getApiBaseUrl();
 
   // Generate an idempotency key for this submission.
   // This prevents accidental duplicate applications if the request

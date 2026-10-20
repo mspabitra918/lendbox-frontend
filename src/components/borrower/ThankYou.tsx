@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { formatCurrency, labelOf, PURPOSES } from "@/lib/application";
+import { formatCurrency, getApiBaseUrl, labelOf, PURPOSES } from "@/lib/application";
 
 const NEXT_STEPS = [
   {
@@ -54,8 +54,7 @@ export default function ThankYou() {
 
     async function fetchApplication() {
       try {
-        const baseUrl =
-          process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4100";
+        const baseUrl = getApiBaseUrl();
 
         const response = await fetch(
           `${baseUrl}/api/v1/applications/${encodeURIComponent(id!)}`,

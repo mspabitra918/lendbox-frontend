@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import ApplicationStatusView from "@/components/borrower/ApplicationStatusView";
 
 export const metadata: Metadata = {
@@ -6,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function ApplicationStatusPage() {
-  return <ApplicationStatusView />;
+  return (
+    <Suspense fallback={null}>
+      <ApplicationStatusView />
+    </Suspense>
+  );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import type { ApplicationStatus, StoredApplication } from "@/types/application";
-import { PURPOSES, formatCurrency, labelOf } from "@/lib/application";
+import { PURPOSES, formatCurrency, getApiBaseUrl, labelOf } from "@/lib/application";
 
 type StatusMeta = {
   label: string;
@@ -173,9 +173,7 @@ function ApplicationStatusContent() {
     setLoading(true);
 
     try {
-      const baseUrl = (
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:4100"
-      ).replace(/\/+$/, "");
+      const baseUrl = getApiBaseUrl();
 
       const params = new URLSearchParams({
         applicationId: String(cleanId),
