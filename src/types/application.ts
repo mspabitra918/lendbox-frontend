@@ -69,8 +69,6 @@ export type ApplicationFormData = {
 
 export type ApplicationStatus =
   | "submitted"
-  | "pending_loan_agreement"
-  | "loan_agreement_signed"
   | "approved"
   | "funded"
   | "declined"
@@ -96,6 +94,5 @@ export type StoredApplication = {
 export type StoredApplicationId = {
   data: {
     applicationId: string;
-    reference: string;
   };
 };

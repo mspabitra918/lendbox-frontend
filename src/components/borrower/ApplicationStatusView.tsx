@@ -55,20 +55,6 @@ const STATUS: Record<ApplicationStatus, StatusMeta> = {
     badge: "bg-slate-100 text-slate-700 ring-slate-500/20",
     dot: "bg-slate-400",
   },
-  pending_loan_agreement: {
-    label: "Agreement Pending",
-    title: "Loan agreement pending",
-    message: "Please review and complete your loan agreement.",
-    badge: "bg-amber-50 text-amber-700 ring-amber-600/20",
-    dot: "bg-amber-500",
-  },
-  loan_agreement_signed: {
-    label: "Agreement Signed",
-    title: "Loan agreement signed",
-    message: "Your signed loan agreement has been received.",
-    badge: "bg-indigo-50 text-indigo-700 ring-indigo-600/20",
-    dot: "bg-indigo-500",
-  },
 };
 
 const HAPPY_PATH: ApplicationStatus[] = ["submitted", "approved", "funded"];
@@ -95,10 +81,13 @@ function mapApplication(data: StoredApplication): StoredApplication {
     submittedAt: data.submittedAt,
     bankName: data.bankName ?? "",
     accountLast4: data.accountLast4 ?? "",
-    history: data.history.map((item) => ({
-      status: normalizeStatus(item.status),
-      at: item.at,
-    })),
+    // Older history may contain retired statuses (e.g. agreement steps); skip them.
+    history: data.history
+      .filter((item) => ((item.status as string) === "received" ? "submitted" : item.status) in STATUS)
+      .map((item) => ({
+        status: normalizeStatus(item.status),
+        at: item.at,
+      })),
     applicant: {
       firstName: data.applicant.firstName,
       lastName: data.applicant.lastName ?? "",

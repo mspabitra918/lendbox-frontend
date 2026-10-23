@@ -119,7 +119,7 @@ export default function RegisterForm() {
       router.push(
         `/borrower/register/thank-you?email=${encodeURIComponent(
           data.personal.email,
-        )}&id=${encodeURIComponent(res.data.applicationId)}&reference=${encodeURIComponent(res.data.reference)}`,
+        )}&id=${encodeURIComponent(res.data.applicationId)}`,
       );
     } catch {
       setSubmitError(
